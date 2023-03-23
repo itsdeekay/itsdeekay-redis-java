@@ -15,20 +15,19 @@ public class Main {
     System.out.println("Logs from your program will appear here!");
     ServerSocket serverSocket = null;
     Socket clientSocket = null;
-    int port = 6379;
+    int port = 6378;
     try {
       serverSocket = new ServerSocket(port);
       serverSocket.setReuseAddress(true);
       // Wait for connection from client.
       clientSocket = serverSocket.accept();
-      BufferedReader inputStream = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-      BufferedWriter outputStrem = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-      String line = inputStream.readLine();
-      while (line != null && !line.equals("end")) {
-        System.out.println("Line: "+line);
-        if (line.equalsIgnoreCase("ping")) {
-          outputStrem.write("+PONG\r\n");
-          outputStrem.flush();
+      BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+      BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+      String line;
+      while ((line = reader.readLine()) != null) {
+        if ("ping".equals(line)) {
+          writer.write("+PONG\r\n");
+          writer.flush();
         }
       }
       clientSocket.close();
