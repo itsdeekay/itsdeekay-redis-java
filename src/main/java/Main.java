@@ -1,10 +1,11 @@
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main {
   public static void main(String[] args) {
@@ -17,7 +18,7 @@ public class Main {
       serverSocket = new ServerSocket(port);
       serverSocket.setReuseAddress(true);
       // Wait for connection from client.
-      while(true){
+      while (true) {
         Socket clientSocket = serverSocket.accept();
         Thread t = new Thread(new ClientHandler(clientSocket));
         t.start();
@@ -34,24 +35,43 @@ public class Main {
       }
     }
   }
+
   static class ClientHandler implements Runnable {
     private Socket clientSocket;
 
-    public ClientHandler(Socket clientSocket){
+    public ClientHandler(Socket clientSocket) {
       this.clientSocket = clientSocket;
     }
 
-    public void run(){
+    private void handlePing(BufferedWriter writer) throws IOException {
+      writer.write("+PONG\r\n");
+      writer.flush();
+    }
+
+    private void handleEcho(BufferedWriter writer, String line) throws IOException {
+      writer.write("+" + line + "\r\n");
+      writer.flush();
+    }
+
+    public void run() {
       try {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-      BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-      String line;
-      while ((line = reader.readLine()) != null) {
-        if ("ping".equals(line)) {
-          writer.write("+PONG\r\n");
-          writer.flush();
+        //BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+        byte[] buffer = new byte[1024];
+        while (clientSocket.getInputStream().read(buffer)!=-1) {
+          String msg = new String(buffer);
+          List<String> args = Arrays.stream(msg.split("\r\n")).filter(arg -> !arg.trim().isEmpty() && !arg.startsWith("*") && !arg.startsWith("$")).collect(Collectors.toList());
+          switch (args.get(0).toLowerCase()) {
+            case "ping":
+              handlePing(writer);
+              break;
+            case "echo":
+              handleEcho(writer, args.get(1));
+              break;
+            default:
+              break;
+          }
         }
-      }
       } catch (IOException e) {
         System.out.println("IOException: " + e.getMessage());
       } finally {
@@ -64,6 +84,5 @@ public class Main {
         }
       }
     }
+  }
 }
-}
-
