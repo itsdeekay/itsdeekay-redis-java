@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import memory.Memory;
 
 public class Main {
   public static void main(String[] args) {
@@ -53,6 +54,18 @@ public class Main {
       writer.flush();
     }
 
+    private void handleSet(BufferedWriter writer, String key, String value) throws IOException {
+      Memory.set(key, value);
+      writer.write("+OK\r\n");
+      writer.flush();
+    }
+
+    private void handleGet(BufferedWriter writer, String key) throws IOException {
+      String value = Memory.get(key);
+      writer.write("+" + value +"\r\n");
+      writer.flush();
+    }
+
     public void run() {
       try {
         //BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -67,6 +80,12 @@ public class Main {
               break;
             case "echo":
               handleEcho(writer, args.get(1));
+              break;
+            case "set":
+              handleSet(writer, args.get(1), args.get(2));
+              break;
+            case "get":
+              handleGet(writer, args.get(1));
               break;
             default:
               break;
