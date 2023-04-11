@@ -5,6 +5,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import memory.Memory;
 
@@ -19,6 +21,12 @@ public class Main {
       serverSocket = new ServerSocket(port);
       serverSocket.setReuseAddress(true);
       // Wait for connection from client.
+
+      //Logic to clear the expired keys from memory store after every 10s
+      Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+        Memory.expireKeys();
+      },5, 5, TimeUnit.SECONDS);
+
       while (true) {
         Socket clientSocket = serverSocket.accept();
         Thread t = new Thread(new ClientHandler(clientSocket));
@@ -54,15 +62,23 @@ public class Main {
       writer.flush();
     }
 
-    private void handleSet(BufferedWriter writer, String key, String value) throws IOException {
-      Memory.set(key, value);
+    private void handleSet(BufferedWriter writer, List<String> args) throws IOException {
+      String key = args.get(0);
+      String value = args.get(1);
+      long pxMilliSeconds = 86400000000L; //default expiry for a day
+      if(args.indexOf("PX") != -1){
+        pxMilliSeconds = Long.parseLong(args.get(args.indexOf("PX") + 1));
+      }
+      Memory.set(key, value, pxMilliSeconds);
       writer.write("+OK\r\n");
       writer.flush();
     }
 
     private void handleGet(BufferedWriter writer, String key) throws IOException {
       String value = Memory.get(key);
-      writer.write("+" + value +"\r\n");
+      if(value != null)
+        writer.write("+" + value +"\r\n");
+      else writer.write("$-1\r\n");
       writer.flush();
     }
 
@@ -82,7 +98,7 @@ public class Main {
               handleEcho(writer, args.get(1));
               break;
             case "set":
-              handleSet(writer, args.get(1), args.get(2));
+              handleSet(writer, args.subList(1, args.size()));
               break;
             case "get":
               handleGet(writer, args.get(1));
