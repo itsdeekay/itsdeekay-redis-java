@@ -66,8 +66,10 @@ public class Main {
       String key = args.get(0);
       String value = args.get(1);
       long pxMilliSeconds = 86400000000L; //default expiry for a day
-      if(args.indexOf("PX") != -1){
-        pxMilliSeconds = Long.parseLong(args.get(args.indexOf("PX") + 1));
+      for(int i=2;i<args.size();i++){
+        if(args.get(i).equalsIgnoreCase("px")){
+          pxMilliSeconds = Long.parseLong(args.get(i+1));
+        }
       }
       Memory.set(key, value, pxMilliSeconds);
       writer.write("+OK\r\n");
